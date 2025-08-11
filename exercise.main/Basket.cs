@@ -27,7 +27,7 @@ namespace exercise.main
             { "FILS", new Filling("FILS", 0.12, "Filling", "Smoked Salmon") },
             { "FILH", new Filling("FILH", 0.12, "Filling", "Ham") }
         };
-        private int _capacity = 5;
+        private int _capacity = 50;
         private List<IInventoryItem> _items = new List<IInventoryItem>();
 
         private bool _confirmInStock(IInventoryItem diff_item)
@@ -69,6 +69,59 @@ namespace exercise.main
         public void ChangeCapacity(int newCapacity)
         {
             _capacity = newCapacity;
+        }
+
+        public double GetItemPrice(string sku)
+        {
+            if (_inventoryItems.ContainsKey(sku))
+            {
+                Console.WriteLine($"Price for SKU '{sku}' ({_inventoryItems[sku].Variant}): {_inventoryItems[sku].Price}");
+                return _inventoryItems[sku].Price;
+            }
+            else return -1;
+        }
+
+        public string GetFillingPrices()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var kvp in _inventoryItems)
+            {
+                if (kvp.Value.Name == "Filling")
+                {
+                    sb.Append($"Variant: {kvp.Value.Variant}, Price: {kvp.Value.Price}\n");
+                    //Console.WriteLine($"Variant: {kvp.Value.Variant}, Price: {kvp.Value.Price}");
+                }
+            }
+            Console.WriteLine(sb.ToString());
+            return sb.ToString();
+        }
+
+        public double GetDiscountedCosts()
+        {
+            /*
+            double totalPrice = 0
+            For each bagel SKU:
+                bigDiscount = bagel.Count // 12
+                IF bigDiscount > 0:
+                    totalPrice += 3.99 * bigDiscount
+                
+                smallDiscount = 
+                
+                IF (bagel.Count % 12 == 0):
+                    bagel.Count / 12
+                    totalPrice = 3.99
+                IF (bagel.Count % 6 == 0 || bagel.Count % 12 == 0):
+                    
+                
+
+            */
+            throw new NotImplementedException();
+        }
+
+        // Extension 2
+        public string PrintReceipt()
+        {
+            throw new NotImplementedException();
         }
 
         public double TotalCost { get { return _items.Sum(item => item.Price); } }
