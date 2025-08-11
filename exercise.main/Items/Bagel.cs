@@ -8,6 +8,7 @@ namespace exercise.main.Items
 {
     public class Bagel : IInventoryItem
     {
+        private double _totalPrice;
         public string SKU { get; set; }
         public double Price { get; set; }
         public string Name { get; set; }
@@ -29,6 +30,7 @@ namespace exercise.main.Items
         public void Add(Filling filling)
         {
             Fillings.Add(filling);
+            Price += filling.Price;
         }
     }
 }

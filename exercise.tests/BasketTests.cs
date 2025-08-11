@@ -30,13 +30,15 @@ public class Tests
         // Arrange
         Basket basket = new Basket();
         Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
+        Bagel bagel2 = new Bagel(sku: "BGLP", price: 0.39, name: "Bagel", variant: "Plain");
 
         // Act
-        basket.ChangeCapacity(0);
+        basket.ChangeCapacity(1);
         basket.Add(bagel);
+        basket.Add(bagel2);
 
         // Assert
-        Assert.That(basket.Items.Count, Is.EqualTo(0));
+        Assert.That(basket.Items.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -89,6 +91,8 @@ public class Tests
         Basket basket = new Basket();
         Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
         Bagel bagel2 = new Bagel(sku: "BGLP", price: 0.39, name: "Bagel", variant: "Plain");
+        
+        Filling filling = new Filling(sku: "FILB", price: 0.12, name: "Filling", variant: "Bacon");
 
         // Act
         basket.Add(bagel);
@@ -112,5 +116,20 @@ public class Tests
 
         // Assert
         Assert.That(result1 == true && result2 == false);
+    }
+
+    [Test]
+    public void AddFillingTests()
+    {
+        // Arrange
+        Basket basket = new Basket();
+        Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
+        Filling filling = new Filling(sku: "FILB", price: 0.12, name: "Filling", variant: "Bacon");
+
+        // Act
+        bagel.Add(filling);
+
+        // Assert
+        Assert.That(bagel.Fillings.Count, Is.EqualTo(1));
     }
 }

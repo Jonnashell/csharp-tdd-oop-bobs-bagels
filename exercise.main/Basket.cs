@@ -30,27 +30,48 @@ namespace exercise.main
         private int _capacity = 5;
         private List<IInventoryItem> _items = new List<IInventoryItem>();
 
-        private bool _confirmInStock(IInventoryItem item)
+        private bool _confirmInStock(IInventoryItem diff_item)
         {
-            throw new NotImplementedException();
+            if (_inventoryItems.ContainsKey(diff_item.SKU))
+            {
+                IInventoryItem ref_item = _inventoryItems[diff_item.SKU];
+                if (ref_item.SKU == diff_item.SKU &&
+                    ref_item.Price == diff_item.Price &&
+                    ref_item.Name == diff_item.Name &&
+                    ref_item.Variant == diff_item.Variant)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool Add(IInventoryItem item)
         {
-            throw new NotImplementedException();
+            if (_items.Count >= _capacity)
+            {
+                Console.WriteLine("Basket is full!");
+                return false;
+            }
+            if (_confirmInStock(item))
+            {
+                _items.Add(item);
+                return true;
+            }
+            return false;
         }
 
         public bool Remove(IInventoryItem item)
         {
-            throw new NotImplementedException();
+            return _items.Remove(item);
         }
 
         public void ChangeCapacity(int newCapacity)
         {
-            throw new NotImplementedException();
+            _capacity = newCapacity;
         }
 
-        public double TotalCost { get { return _items.Sum(i => i.Price); } }
+        public double TotalCost { get { return _items.Sum(item => item.Price); } }
         public List<IInventoryItem> Items { get { return _items; } }
         public int Capacity { get { return _capacity; } }
     }
