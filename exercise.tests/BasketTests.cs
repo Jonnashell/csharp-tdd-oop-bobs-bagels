@@ -132,4 +132,33 @@ public class Tests
         // Assert
         Assert.That(bagel.Fillings.Count, Is.EqualTo(1));
     }
+
+    [Test]
+    public void GetFillingsPriceTest()
+    {
+        Basket basket = new Basket();
+        string result = basket.GetFillingPrices();
+
+        Assert.That(result.Length, Is.GreaterThan(1));
+    }
+
+    [Test]
+    public void GetBagelPriceTest()
+    {
+        Basket basket = new Basket();
+        Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
+
+        double price = basket.GetItemPrice(bagel.SKU);
+        Assert.That(price, Is.EqualTo(bagel.Price));
+    }
+
+    [Test]
+    public void GetFillingPriceTest() // for single filling
+    {
+        Basket basket = new Basket();
+        Filling filling = new Filling(sku: "FILB", price: 0.12, name: "Filling", variant: "Bacon");
+
+        double price = basket.GetItemPrice(filling.SKU);
+        Assert.That(price, Is.EqualTo(filling.Price));
+    }
 }
