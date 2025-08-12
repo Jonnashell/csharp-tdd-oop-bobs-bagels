@@ -132,4 +132,33 @@ public class ExtensionTests
         // Assert
         Assert.That(receipt.Length, Is.GreaterThan(1)); // Non-empty string
     }
+
+    [Test]
+    public void PrintReceiptExtraTestAgain()
+    {
+        // Example: 1 deal of 6 bagels, 1 deal of coffe + bagel
+        // Arrange
+        Basket basket1 = new Basket();
+
+        Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
+        Bagel bagel2 = new Bagel(sku: "BGLE", price: 0.49, name: "Bagel", variant: "Everything");
+        Coffee coffee = new Coffee(sku: "COFB", price: 0.99, name: "Coffee", variant: "Black");
+
+        // Act
+        basket1.Add(coffee);
+        for (int i = 0; i < 13; i++)
+        {
+            basket1.Add(bagel);
+        }
+
+        for (int i = 0; i < 7; i++)
+        {
+            basket1.Add(bagel2);
+        }
+
+        string receipt = basket1.PrintReceipt();
+
+        // Assert
+        Assert.That(receipt.Length, Is.GreaterThan(1)); // Non-empty string
+    }
 }
