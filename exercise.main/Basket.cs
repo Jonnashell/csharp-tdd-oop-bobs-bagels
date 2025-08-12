@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace exercise.main
 {
     public class Basket
     {
-
+        // Easy lookup for items in stock
         private Dictionary<string, IInventoryItem> _inventoryItems = new Dictionary<string, IInventoryItem>
         {
             { "BGLO", new Bagel("BGLO", 0.49, "Bagel", "Onion") },
@@ -89,39 +90,128 @@ namespace exercise.main
                 if (kvp.Value.Name == "Filling")
                 {
                     sb.Append($"Variant: {kvp.Value.Variant}, Price: {kvp.Value.Price}\n");
-                    //Console.WriteLine($"Variant: {kvp.Value.Variant}, Price: {kvp.Value.Price}");
                 }
             }
             Console.WriteLine(sb.ToString());
             return sb.ToString();
         }
 
+        private Dictionary<string, int> GetBagelsDict()
+        {
+            Dictionary<string, int> bagelsDict = new Dictionary<string, int>();
+            foreach (var item in _items)
+            {
+                if (item is Bagel bagel)
+                {
+                    // Add key if doesn't exist
+                    if (!bagelsDict.ContainsKey(item.SKU))
+                    {
+                        // Set count to 1
+                        bagelsDict[item.SKU] = 0;
+                    }
+                    // Increment count by 1
+                    bagelsDict[item.SKU] += 1;
+                }
+            }
+            return bagelsDict;
+        }
+
         public double GetDiscountedCosts()
         {
+            // Bagel_type, Bagel_type_amount, Bagel_type_price
             /*
             double totalPrice = 0
-            For each bagel SKU:
-                bigDiscount = bagel.Count // 12
-                IF bigDiscount > 0:
-                    totalPrice += 3.99 * bigDiscount
-                
-                smallDiscount = 
-                
-                IF (bagel.Count % 12 == 0):
-                    bagel.Count / 12
-                    totalPrice = 3.99
-                IF (bagel.Count % 6 == 0 || bagel.Count % 12 == 0):
-                    
-                
 
+            bigDiscount = Bagel_type_amount / 12
+            remainderBig = Bagel_type_amount % 12
+
+            smallDiscount = remainderBig / 6
+            remainderSmall = remainderBig % 6
+
+            totalPrice += (3.99 * bigDiscount)
+            totalPrice += (2.49 * smallDiscount) + (remainderSmall * Bagel_type_price)
             */
-            throw new NotImplementedException();
+            Dictionary<string, int> bagelsDict = GetBagelsDict();
+            List<(string, int, double)> receiptList = new List<(string, int, double)> ();  
+            double totalPrice = 0;
+            foreach (var kvp in bagelsDict)
+            {
+                // Define variables
+                string bagel_type = kvp.Key;
+                int bagel_type_amount = kvp.Value;
+                double bagel_type_price = _inventoryItems[kvp.Key].Price;
+
+                // Initialize price
+                double price = 0;
+
+                // Get discount price for 12x bagels
+                int bigDiscount = bagel_type_amount / 12;
+                int remainderBig = bagel_type_amount % 12;
+
+                double bigPrice = (3.99 * bigDiscount);
+
+                // Add discounted price to list, if exists
+                if (bigDiscount > 0)
+                {
+                    receiptList.Add((bagel_type, bigDiscount * 12, bigPrice));
+                }
+
+                // Get discount price for 6x bagels
+                int smallDiscount = remainderBig / 6;
+                int remainderSmall = remainderBig % 6;
+
+                double smallPrice = (2.49 * smallDiscount);
+
+                // Add discounted price to list, if exists
+                if (smallDiscount > 0)
+                {
+                    receiptList.Add((bagel_type, smallDiscount * 6, smallPrice));
+                }
+
+                double remainderPrice = (bagel_type_price * remainderSmall);
+
+                if (remainderSmall > 0)
+                {
+                    receiptList.Add((bagel_type, remainderSmall, remainderPrice));
+                }
+
+                price = bigPrice + smallPrice + remainderPrice;
+                totalPrice += price;
+            }
+            return totalPrice;
         }
 
         // Extension 2
         public string PrintReceipt()
         {
-            throw new NotImplementedException();
+            double total_cost = 5.55;
+            // double total_cost = GetTotalCosts();
+            StringBuilder sb = new StringBuilder();
+
+            sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------\n\n");
+            foreach (var item in _items)
+            {
+                if (item is Bagel bagel)
+                {
+                    sb.Append($"{item.Variant} Bagel\t\t'X'\t£{item.Price}\n".Replace(",", "."));
+
+                    foreach (Filling f in bagel.Fillings)
+                    {
+                        sb.Append($"{f.Variant} Filling\t'X'\t£{f.Price}\n".Replace(",","."));
+                    }
+                }
+                else if (item is Coffee coffee)
+                {
+                    sb.Append($"{item.Variant} Coffee\t'X'\t£{item.Price}\n");
+                }
+            }
+
+            sb.Append($"\n---------------------------\n");
+            sb.Append($"Total\t\t\t\t£{total_cost}\n\n".Replace(",", "."));
+
+            sb.Append($"\t\tThank you\n\t  for your order!");
+            Console.WriteLine(sb.ToString());
+            return sb.ToString();
         }
 
         public double TotalCost { get { return _items.Sum(item => item.Price); } }
