@@ -112,13 +112,19 @@ public class ExtensionTests
         Basket basket1 = new Basket();
 
         Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
+        Bagel bagel2 = new Bagel(sku: "BGLP", price: 0.39, name: "Bagel", variant: "Plain");
         Coffee coffee = new Coffee(sku: "COFB", price: 0.99, name: "Coffee", variant: "Black");
 
         // Act
         basket1.Add(coffee);
-        for (int i = 0; i < 19; i++)
+        for (int i = 0; i < 13; i++)
         {
             basket1.Add(bagel);
+        }
+
+        for (int i = 0; i < 7; i++)
+        {
+            basket1.Add(bagel2);
         }
 
         string receipt = basket1.PrintReceipt();

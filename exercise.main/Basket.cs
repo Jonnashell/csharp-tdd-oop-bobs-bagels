@@ -31,7 +31,7 @@ namespace exercise.main
         };
         private int _capacity = 50;
         private double _totalCosts;
-        private List<(string, int, double, string)> _receiptList;
+        private List<(string, int, double, string, double)> _receiptList;
         private List<IInventoryItem> _items = new List<IInventoryItem>();
 
         private bool _confirmInStock(IInventoryItem diff_item)
@@ -101,19 +101,20 @@ namespace exercise.main
 
         private Dictionary<string, int> _itemDictCount { get { return _items.GroupBy(item => item.SKU).ToDictionary(group => group.Key, group => group.Count()); } }
 
-        private List<(string, int, double, string)> ReceiptHelp(string sku, int discountNum, int discountType, double price, string variant)
+        private List<(string, int, double, string, double)> ReceiptHelp(string sku, int discountNum, int discountType, double price, string variant, double singlePrice)
         {
-            List<(string, int, double, string)> result = new List<(string, int, double, string)>();
+            List<(string, int, double, string, double)> result = new List<(string, int, double, string, double)>();
             for (int i = 0; i < discountNum; i++)
             {
-                result.Add((sku, discountNum * discountType, price, variant));
+                double saved = price - (singlePrice * discountType);
+                result.Add((sku, discountNum * discountType, price, variant, saved));
             }
             return result;
         }
 
         public double GetTotalCosts()
         {
-            List<(string, int, double, string)> receiptList = new List<(string, int, double, string)>();
+            List<(string, int, double, string, double)> receiptList = new List<(string, int, double, string, double)>();
             double totalPrice = 0;
             List<Bagel> remainingBagels = new List<Bagel>();
             var groupedItems = _items.GroupBy(item => item.SKU).OrderBy(group => group.Key.StartsWith("BGL") ? 0 : 1).ToList();
@@ -137,14 +138,14 @@ namespace exercise.main
                             }
 
                             // Receipt stuff (hard coded discount price)
-                            receiptList.AddRange(ReceiptHelp(item.SKU, bigDiscount, 12, 3.99, item.Variant));
-                            receiptList.AddRange(ReceiptHelp(item.SKU, smallDiscount, 6, 2.49, item.Variant));
+                            receiptList.AddRange(ReceiptHelp(item.SKU, bigDiscount, 12, 3.99, item.Variant, item.Price));
+                            receiptList.AddRange(ReceiptHelp(item.SKU, smallDiscount, 6, 2.49, item.Variant, item.Price));
                         }
 
                         // Add filling price for all bagels
                         foreach (Filling filling in bagel.Fillings)
                         {
-                            receiptList.Add((filling.SKU, 1, filling.Price, filling.Variant));
+                            receiptList.Add((filling.SKU, 1, filling.Price, filling.Variant, 0));
                             price += filling.Price;
                         }
                     }
@@ -159,12 +160,12 @@ namespace exercise.main
                             remainingBagels.Remove(maxBagel);
 
                             // Hard coded discount price
-                            receiptList.Add((coffee.SKU, 1, 1.25, coffee.Variant));
+                            receiptList.Add(("COFB", 1, 1.25, $"{maxBagel.Name} &", 1.25 - (coffee.Price + maxBagel.Price)));
                             totalPrice += 1.25;
                         }
                         else
                         {
-                            receiptList.Add((coffee.SKU, 1, coffee.Price, coffee.Variant));
+                            receiptList.Add((coffee.SKU, 1, coffee.Price, coffee.Variant, 0));
                             totalPrice += coffee.Price;
                         }
                     }
@@ -175,7 +176,7 @@ namespace exercise.main
             for (int i = 0; i < remainingBagels.Count; i++)
             {
                 totalPrice += remainingBagels[i].Price;
-                receiptList.Add((remainingBagels[i].SKU, 1, remainingBagels[i].Price, remainingBagels[i].Variant));
+                receiptList.Add((remainingBagels[i].SKU, 1, remainingBagels[i].Price, remainingBagels[i].Variant, 0));
             }
             // Update private receipt list
             _receiptList = receiptList;
@@ -204,6 +205,7 @@ namespace exercise.main
             int remainderSmall = remainderBig % 6;
 
             double smallPrice = (2.49 * smallDiscount);
+            double remainderPrice = remainderSmall * bagel_type_price;
 
             price = bigPrice + smallPrice;
             
@@ -215,14 +217,14 @@ namespace exercise.main
         {
             // Run GetTotalCosts to fill _receiptList and _totalCosts
             if (_receiptList is null) GetTotalCosts();
-
+            double totalSaved = 0;
             StringBuilder sb = new StringBuilder();
             sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------\n\n");
 
             for (int i = 0; i < _receiptList.Count; i++)
             {
                 string itemType = "Bagel\t\t";
-                (string sku, int quantity, double price, string variant) = _receiptList[i];
+                (string sku, int quantity, double price, string variant, double saved) = _receiptList[i];
                 if (sku.StartsWith("C"))
                 {
                     itemType = "Coffee\t";
@@ -232,43 +234,20 @@ namespace exercise.main
                     itemType = "Filling\t";
                 }
 
-                sb.Append($"{variant} {itemType}{quantity}\t£{price}\n".Replace(",", "."));
+                sb.Append($"{variant} {itemType}{quantity}\t£{price}".Replace(",", "."));
+                if (saved != 0)
+                {
+                    totalSaved += Math.Abs(saved);
+                    sb.Append($"\n\t\t\t\t  (-£{Math.Abs(Math.Round(saved, 2))})".Replace(",", "."));
+                }
+
+                sb.Append("\n");
             }
 
             sb.Append($"\n---------------------------\n");
             sb.Append($"Total\t\t\t\t£{Math.Round(_totalCosts, 2)}\n\n".Replace(",", "."));
 
-            sb.Append($"\t\tThank you\n\t  for your order!");
-            Console.WriteLine(sb.ToString());
-            return sb.ToString();
-        }
-
-        public string PrintReceipt2()
-        {
-            double total_cost = 5.55;
-            // double total_cost = GetTotalCosts();
-            StringBuilder sb = new StringBuilder();
-
-            sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------\n\n");
-            foreach (var item in _items)
-            {
-                if (item is Bagel bagel)
-                {
-                    sb.Append($"{item.Variant} Bagel\t\t'X'\t£{item.Price}\n".Replace(",", "."));
-
-                    foreach (Filling f in bagel.Fillings)
-                    {
-                        sb.Append($"{f.Variant} Filling\t'X'\t£{f.Price}\n".Replace(",","."));
-                    }
-                }
-                else if (item is Coffee coffee)
-                {
-                    sb.Append($"{item.Variant} Coffee\t'X'\t£{item.Price}\n");
-                }
-            }
-
-            sb.Append($"\n---------------------------\n");
-            sb.Append($"Total\t\t\t\t£{total_cost}\n\n".Replace(",", "."));
+            sb.Append($"You have saved a total of £{Math.Round(totalSaved,2)}\n\t\ton this shop\n\n".Replace(",", "."));
 
             sb.Append($"\t\tThank you\n\t  for your order!");
             Console.WriteLine(sb.ToString());
