@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mail;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -160,7 +161,7 @@ namespace exercise.main
                             remainingBagels.Remove(maxBagel);
 
                             // Hard coded discount price
-                            receiptList.Add(("COFB", 1, 1.25, $"{maxBagel.Name} &", 1.25 - (coffee.Price + maxBagel.Price)));
+                            receiptList.Add(("COFB", 1, 1.25, $"Bgl&Cfe", 1.25 - (coffee.Price + maxBagel.Price)));
                             totalPrice += 1.25;
                         }
                         else
@@ -219,38 +220,41 @@ namespace exercise.main
             if (_receiptList is null) GetTotalCosts();
             double totalSaved = 0;
             StringBuilder sb = new StringBuilder();
-            sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------\n\n");
+            sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------------\n\n");
 
             for (int i = 0; i < _receiptList.Count; i++)
             {
-                string itemType = "Bagel\t\t";
+                string itemType = "Bagel";
                 (string sku, int quantity, double price, string variant, double saved) = _receiptList[i];
                 if (sku.StartsWith("C"))
                 {
-                    itemType = "Coffee\t";
+                    itemType = "Coffee";
                 }
                 else if (sku.StartsWith("F"))
                 {
-                    itemType = "Filling\t";
+                    itemType = "Filling";
                 }
 
-                sb.Append($"{variant} {itemType}{quantity}\t£{price}".Replace(",", "."));
+                //sb.Append($"{variant} {itemType}{quantity}\t£{price}".Replace(",", "."));
+                sb.AppendFormat("{0, -10}{1,-8}{2,-4}{3,6}\n", variant, itemType, quantity, $"£{price}");
                 if (saved != 0)
                 {
                     totalSaved += Math.Abs(saved);
-                    sb.Append($"\n\t\t\t\t  (-£{Math.Abs(Math.Round(saved, 2))})".Replace(",", "."));
+                    sb.AppendFormat("{0, 29}", $"(-€{Math.Abs(Math.Round(saved, 2))})");
+                    //sb.Append($"\n\t\t\t\t  (-£{Math.Abs(Math.Round(saved, 2))})".Replace(",", "."));
                 }
 
                 sb.Append("\n");
             }
 
-            sb.Append($"\n---------------------------\n");
-            sb.Append($"Total\t\t\t\t£{Math.Round(_totalCosts, 2)}\n\n".Replace(",", "."));
+            sb.Append($"\n---------------------------------\n");
+            //sb.Append($"Total\t\t\t\t£{Math.Round(_totalCosts, 2)}\n\n".Replace(",", "."));
+            sb.AppendFormat("Total{0, 25}", $"£{Math.Round(_totalCosts, 2)}\n\n");
 
-            sb.Append($"You have saved a total of £{Math.Round(totalSaved,2)}\n\t\ton this shop\n\n".Replace(",", "."));
+            sb.Append($"You have saved a total of £{Math.Round(totalSaved,2)}\n\t\ton this shop\n\n");
 
             sb.Append($"\t\tThank you\n\t  for your order!");
-            Console.WriteLine(sb.ToString());
+            Console.WriteLine(sb.ToString().Replace(",","."));
             return sb.ToString();
         }
 

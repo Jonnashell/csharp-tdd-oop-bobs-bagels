@@ -112,7 +112,7 @@ public class ExtensionTests
         Basket basket1 = new Basket();
 
         Bagel bagel = new Bagel(sku: "BGLO", price: 0.49, name: "Bagel", variant: "Onion");
-        Bagel bagel2 = new Bagel(sku: "BGLP", price: 0.39, name: "Bagel", variant: "Plain");
+        Bagel bagel2 = new Bagel(sku: "BGLS", price: 0.49, name: "Bagel", variant: "Sesame");
         Coffee coffee = new Coffee(sku: "COFB", price: 0.99, name: "Coffee", variant: "Black");
 
         // Act
