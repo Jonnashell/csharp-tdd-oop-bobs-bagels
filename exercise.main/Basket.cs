@@ -235,24 +235,19 @@ namespace exercise.main
                     itemType = "Filling";
                 }
 
-                //sb.Append($"{variant} {itemType}{quantity}\t£{price}".Replace(",", "."));
                 sb.AppendFormat("{0, -12}{1,-8}{2,-4}{3,6}\n", variant, itemType, quantity, $"£{price}");
                 if (saved != 0)
                 {
                     totalSaved += Math.Abs(saved);
                     sb.AppendFormat("{0, 31}", $"(-€{Math.Abs(Math.Round(saved, 2))})");
-                    //sb.Append($"\n\t\t\t\t  (-£{Math.Abs(Math.Round(saved, 2))})".Replace(",", "."));
                 }
 
                 sb.Append("\n");
             }
 
             sb.Append($"\n---------------------------------\n");
-            //sb.Append($"Total\t\t\t\t£{Math.Round(_totalCosts, 2)}\n\n".Replace(",", "."));
             sb.AppendFormat("Total{0, 27}", $"£{Math.Round(_totalCosts, 2)}\n\n");
-
             sb.Append($"You have saved a total of £{Math.Round(totalSaved,2)}\n\t\ton this shop\n\n");
-
             sb.Append($"\t\tThank you\n\t  for your order!");
             Console.WriteLine(sb.ToString().Replace(",","."));
             return sb.ToString();
