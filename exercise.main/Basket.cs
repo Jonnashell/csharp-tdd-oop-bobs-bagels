@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace exercise.main
 {
@@ -29,6 +30,8 @@ namespace exercise.main
             { "FILH", new Filling("FILH", 0.12, "Filling", "Ham") }
         };
         private int _capacity = 50;
+        private double _totalCosts;
+        private List<(string, int, double, string)> _receiptList;
         private List<IInventoryItem> _items = new List<IInventoryItem>();
 
         private bool _confirmInStock(IInventoryItem diff_item)
@@ -96,93 +99,151 @@ namespace exercise.main
             return sb.ToString();
         }
 
-        private Dictionary<string, int> GetBagelsDict()
+        private Dictionary<string, int> _itemDictCount { get { return _items.GroupBy(item => item.SKU).ToDictionary(group => group.Key, group => group.Count()); } }
+
+        private List<(string, int, double, string)> ReceiptHelp(string sku, int discountNum, int discountType, double price, string variant)
         {
-            Dictionary<string, int> bagelsDict = new Dictionary<string, int>();
-            foreach (var item in _items)
+            List<(string, int, double, string)> result = new List<(string, int, double, string)>();
+            for (int i = 0; i < discountNum; i++)
             {
-                if (item is Bagel bagel)
-                {
-                    // Add key if doesn't exist
-                    if (!bagelsDict.ContainsKey(item.SKU))
-                    {
-                        // Set count to 1
-                        bagelsDict[item.SKU] = 0;
-                    }
-                    // Increment count by 1
-                    bagelsDict[item.SKU] += 1;
-                }
+                result.Add((sku, discountNum * discountType, price, variant));
             }
-            return bagelsDict;
+            return result;
         }
 
-        public double GetDiscountedCosts()
+        public double GetTotalCosts()
         {
-            // Bagel_type, Bagel_type_amount, Bagel_type_price
-            /*
-            double totalPrice = 0
-
-            bigDiscount = Bagel_type_amount / 12
-            remainderBig = Bagel_type_amount % 12
-
-            smallDiscount = remainderBig / 6
-            remainderSmall = remainderBig % 6
-
-            totalPrice += (3.99 * bigDiscount)
-            totalPrice += (2.49 * smallDiscount) + (remainderSmall * Bagel_type_price)
-            */
-            Dictionary<string, int> bagelsDict = GetBagelsDict();
-            List<(string, int, double)> receiptList = new List<(string, int, double)> ();  
+            List<(string, int, double, string)> receiptList = new List<(string, int, double, string)>();
             double totalPrice = 0;
-            foreach (var kvp in bagelsDict)
+            List<Bagel> remainingBagels = new List<Bagel>();
+            var groupedItems = _items.GroupBy(item => item.SKU).OrderBy(group => group.Key.StartsWith("BGL") ? 0 : 1).ToList();
+            foreach (var group in groupedItems)
             {
-                // Define variables
-                string bagel_type = kvp.Key;
-                int bagel_type_amount = kvp.Value;
-                double bagel_type_price = _inventoryItems[kvp.Key].Price;
-
-                // Initialize price
                 double price = 0;
-
-                // Get discount price for 12x bagels
-                int bigDiscount = bagel_type_amount / 12;
-                int remainderBig = bagel_type_amount % 12;
-
-                double bigPrice = (3.99 * bigDiscount);
-
-                // Add discounted price to list, if exists
-                if (bigDiscount > 0)
+                foreach (IInventoryItem item in group)
                 {
-                    receiptList.Add((bagel_type, bigDiscount * 12, bigPrice));
+                    if (item is Bagel bagel)
+                    {
+                        // Only get discount price for first occurence of SKU
+                        if (price <= 0)
+                        {
+                            (double discountPrice, int bigDiscount, int smallDiscount, int remainders) = GetDiscountedCosts(item.SKU);
+                            price += discountPrice;
+
+                            // Add remaining bagels for later coffee deals
+                            for (int i = 0; i < remainders; i++)
+                            {
+                                remainingBagels.Add(bagel);
+                            }
+
+                            // Receipt stuff (hard coded discount price)
+                            receiptList.AddRange(ReceiptHelp(item.SKU, bigDiscount, 12, 3.99, item.Variant));
+                            receiptList.AddRange(ReceiptHelp(item.SKU, smallDiscount, 6, 2.49, item.Variant));
+                        }
+
+                        // Add filling price for all bagels
+                        foreach (Filling filling in bagel.Fillings)
+                        {
+                            receiptList.Add((filling.SKU, 1, filling.Price, filling.Variant));
+                            price += filling.Price;
+                        }
+                    }
+
+                    if (item is Coffee coffee)
+                    {
+                        // If possible coffee deal:
+                        if (remainingBagels.Count > 0)
+                        {
+                            // Remove most expensive bagel and make a coffee deal with it.
+                            Bagel maxBagel = remainingBagels.MaxBy(item => item.Price); // Could do Min() for profit I guess...
+                            remainingBagels.Remove(maxBagel);
+
+                            // Hard coded discount price
+                            receiptList.Add((coffee.SKU, 1, 1.25, coffee.Variant));
+                            totalPrice += 1.25;
+                        }
+                        else
+                        {
+                            receiptList.Add((coffee.SKU, 1, coffee.Price, coffee.Variant));
+                            totalPrice += coffee.Price;
+                        }
+                    }
                 }
-
-                // Get discount price for 6x bagels
-                int smallDiscount = remainderBig / 6;
-                int remainderSmall = remainderBig % 6;
-
-                double smallPrice = (2.49 * smallDiscount);
-
-                // Add discounted price to list, if exists
-                if (smallDiscount > 0)
-                {
-                    receiptList.Add((bagel_type, smallDiscount * 6, smallPrice));
-                }
-
-                double remainderPrice = (bagel_type_price * remainderSmall);
-
-                if (remainderSmall > 0)
-                {
-                    receiptList.Add((bagel_type, remainderSmall, remainderPrice));
-                }
-
-                price = bigPrice + smallPrice + remainderPrice;
                 totalPrice += price;
             }
+            // Add remaining bagels not matched with a discounted offer
+            for (int i = 0; i < remainingBagels.Count; i++)
+            {
+                totalPrice += remainingBagels[i].Price;
+                receiptList.Add((remainingBagels[i].SKU, 1, remainingBagels[i].Price, remainingBagels[i].Variant));
+            }
+            // Update private receipt list
+            _receiptList = receiptList;
+            _totalCosts = totalPrice;
             return totalPrice;
+        }
+
+        public (double, int, int, int) GetDiscountedCosts(string sku)
+        {
+            // Define variables
+            string bagel_type = sku;
+            int bagel_type_amount = _itemDictCount[sku];
+            double bagel_type_price = _inventoryItems[sku].Price;
+
+            // Initialize price
+            double price = 0;
+
+            // Get discount price for 12x bagels
+            int bigDiscount = bagel_type_amount / 12;
+            int remainderBig = bagel_type_amount % 12;
+
+            double bigPrice = (3.99 * bigDiscount);
+
+            // Get discount price for 6x bagels
+            int smallDiscount = remainderBig / 6;
+            int remainderSmall = remainderBig % 6;
+
+            double smallPrice = (2.49 * smallDiscount);
+
+            price = bigPrice + smallPrice;
+            
+            return (price, bigDiscount, smallDiscount, remainderSmall);
         }
 
         // Extension 2
         public string PrintReceipt()
+        {
+            // Run GetTotalCosts to fill _receiptList and _totalCosts
+            if (_receiptList is null) GetTotalCosts();
+
+            StringBuilder sb = new StringBuilder();
+            sb.Insert(0, $"\t~~~ Bob's Bagels ~~~\n\n\t{DateTime.Now.ToString()}\n\n---------------------------\n\n");
+
+            for (int i = 0; i < _receiptList.Count; i++)
+            {
+                string itemType = "Bagel\t\t";
+                (string sku, int quantity, double price, string variant) = _receiptList[i];
+                if (sku.StartsWith("C"))
+                {
+                    itemType = "Coffee\t";
+                }
+                else if (sku.StartsWith("F"))
+                {
+                    itemType = "Filling\t";
+                }
+
+                sb.Append($"{variant} {itemType}{quantity}\t£{price}\n".Replace(",", "."));
+            }
+
+            sb.Append($"\n---------------------------\n");
+            sb.Append($"Total\t\t\t\t£{Math.Round(_totalCosts, 2)}\n\n".Replace(",", "."));
+
+            sb.Append($"\t\tThank you\n\t  for your order!");
+            Console.WriteLine(sb.ToString());
+            return sb.ToString();
+        }
+
+        public string PrintReceipt2()
         {
             double total_cost = 5.55;
             // double total_cost = GetTotalCosts();
